@@ -15,6 +15,9 @@ CursorIndexH EQU 0x0E           ; 光标位置高8位索引值
 CursorIndexL EQU 0x0F           ; 光标位置高8位索引值
 CursorDataRegister  EQU 0x3D5   ; 光标位置数据寄存器
 
+VWidth  EQU 80
+VHeight EQU 25
+
 _start:
     jmp 0x0000:entry
 
@@ -42,19 +45,34 @@ entry:
     mov al, 0x03
     int 0x10
 
-    xor bx, bx
+    ; bx msg
+
+    mov bx, msg
+    call show_msg
+    mov bx, loadmsg
+    call show_msg
+    jmp $
+
+
+show_msg:
+    push ax
+    push bx
+
     mov ah, 0x0C
-show_next_char:
-    mov al, [msg+bx]
+ .show_next:
+    mov al, [bx]
     cmp al, 0
-    jz end
+    jz .show_end
     call putc
     inc bx
-    jmp show_next_char
+    jmp .show_next
+
+ .show_end:
+    pop bx
+    pop ax
+    ret
 
 
-end:
-    jmp $
 
     ; 在光标处显示一个字符，并将光标向后移动一位
     ; AH: 显示模式
@@ -93,6 +111,18 @@ putc:
     in  al, dx
     mov bl, al
 
+    ; 判断是不是\n
+    cmp cl, 0x0A
+    jnz .normal_char
+    mov ax, bx
+    mov bl, VWidth
+    add ax, VWidth - 1
+    div bl
+    mul bl
+    mov bx, ax
+    jmp .set_cursor
+
+ .normal_char:
     ; 在光标处写入字符
     shl bx, 1               ; 因为一个字符占两个字节
     mov word [es:bx], cx
@@ -101,7 +131,7 @@ putc:
     shr bx, 1
     add bx, 1
 
-.set_cursor:
+ .set_cursor:
     mov al, CursorIndexH
     mov dx, CursorIndexRegister
     out dx, al
@@ -124,7 +154,8 @@ putc:
     ret
 
 
-    msg db "this is a test x86 mbr....", 0
+    msg db "this is a test x86 mbr....", 0x0A, 0x00
+    loadmsg db "load loader.bin", 0x0A, 0x00
 
-    gap times 510 - (($ - $$)) db 0
+    gap times 510 - (($ - $$)) db 0x00
     dw 0xAA55
