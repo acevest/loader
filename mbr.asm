@@ -32,33 +32,23 @@ entry:
     mov sp, _start
 
 
-    ; 调用BIOS清屏，并设置为80x25的彩色文本模式
-    ; 功能号: 0x00
-    ; 用途: 设置显示模式
-    ; 参数: AL = 显示模式号
-    ;       AL=0x00: 40x25黑白文本
-    ;       AL=0x01: 40x25彩色文本
-    ;       AL=0x02: 80x25黑白文本
-    ;       AL=0x03: 80x25彩色文本
-    ;       ...
-    mov ah, 0x00
-    mov al, 0x03
-    int 0x10
+   call clear_screen
 
-    ; bx msg
-
+    
     mov bx, msg
     call show_msg
     mov bx, loadmsg
     call show_msg
-    jmp $
 
 
+   jmp $
+
+   ; bx msg
 show_msg:
     push ax
     push bx
 
-    mov ah, 0x0C
+    mov ah, 0x1F
  .show_next:
     mov al, [bx]
     cmp al, 0
@@ -71,7 +61,6 @@ show_msg:
     pop bx
     pop ax
     ret
-
 
 
     ; 在光标处显示一个字符，并将光标向后移动一位
@@ -132,6 +121,50 @@ putc:
     add bx, 1
 
  .set_cursor:
+    call set_cursor
+
+    pop es
+    pop dx
+    pop cx
+    pop bx
+    pop ax
+    ret
+
+clear_screen:
+    push es
+    push bx
+    push ax
+
+    mov ax, VideoSegment
+    mov es, ax
+    mov ax, VWidth
+    mov bl, VHeight
+    mul bl
+    shl ax, 1
+    xor bx, bx
+
+    call set_cursor
+
+ .aa
+    cmp bx, ax
+    jz .cleaned
+    mov word [es:bx], 0x1020
+    add bx, 2
+    jmp .aa
+ .cleaned
+
+   pop ax
+   pop bx
+   pop es
+   ret
+
+   ; BH - 光标位置高8位
+   ; BL - 光标位置低8位
+set_cursor:
+   push dx
+   push bx
+   push ax
+
     mov al, CursorIndexH
     mov dx, CursorIndexRegister
     out dx, al
@@ -146,13 +179,10 @@ putc:
     mov dx, CursorDataRegister
     out dx, al
 
-    pop es
-    pop dx
-    pop cx
-    pop bx
-    pop ax
-    ret
-
+   pop ax
+   pop bx
+   pop dx
+   ret
 
     msg db "this is a test x86 mbr....", 0x0A, 0x00
     loadmsg db "load loader.bin", 0x0A, 0x00
