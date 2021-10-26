@@ -41,15 +41,15 @@ entry:
     call show_msg
 
 
-   jmp $
+    jmp $
 
-   ; show_msg: 显示字符串
-   ; bx: msg的偏移地址
+    ; show_msg: 显示字符串
+    ; bx: msg的偏移地址
 show_msg:
     push ax
     push bx
 
-    mov ah, 0x1F
+    mov ah, 0x0F
  .show_next:
     mov al, [bx]
     cmp al, 0
@@ -153,7 +153,7 @@ clear_screen:
     mov cx, ax
 
     ; 清屏
-    mov ax, 0x1020
+    mov ax, 0x0020
     repnz stosw
 
     pop ax
