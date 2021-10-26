@@ -32,7 +32,7 @@ entry:
     mov sp, _start
 
 
-   call clear_screen
+    call clear_screen
 
     
     mov bx, msg
@@ -43,7 +43,8 @@ entry:
 
    jmp $
 
-   ; bx msg
+   ; show_msg: 显示字符串
+   ; bx: msg的偏移地址
 show_msg:
     push ax
     push bx
@@ -64,8 +65,8 @@ show_msg:
 
 
     ; 在光标处显示一个字符，并将光标向后移动一位
-    ; AH: 显示模式
-    ; AL: 显示字符
+    ; ah: 显示模式
+    ; al: 显示字符
 putc:
     push ax
     push bx
@@ -132,38 +133,42 @@ putc:
 
 clear_screen:
     push es
+    push cx
     push bx
     push ax
 
+    ; 将光标置到屏幕最左上角
+    xor bx, bx
+    call set_cursor
+
+    ; 初化目的地
     mov ax, VideoSegment
     mov es, ax
+    xor di, di
+
+    ; 计算次数
     mov ax, VWidth
     mov bl, VHeight
     mul bl
-    shl ax, 1
-    xor bx, bx
+    mov cx, ax
 
-    call set_cursor
+    ; 清屏
+    mov ax, 0x1020
+    repnz stosw
 
- .aa
-    cmp bx, ax
-    jz .cleaned
-    mov word [es:bx], 0x1020
-    add bx, 2
-    jmp .aa
- .cleaned
+    pop ax
+    pop bx
+    pop cx
+    pop es
+    ret
 
-   pop ax
-   pop bx
-   pop es
-   ret
-
-   ; BH - 光标位置高8位
-   ; BL - 光标位置低8位
+    ; set_cursor: 设置光标位置
+    ; bh - 光标位置高8位
+    ; bl - 光标位置低8位
 set_cursor:
-   push dx
-   push bx
-   push ax
+    push dx
+    push bx
+    push ax
 
     mov al, CursorIndexH
     mov dx, CursorIndexRegister
@@ -179,10 +184,10 @@ set_cursor:
     mov dx, CursorDataRegister
     out dx, al
 
-   pop ax
-   pop bx
-   pop dx
-   ret
+    pop ax
+    pop bx
+    pop dx
+    ret
 
     msg db "this is a test x86 mbr....", 0x0A, 0x00
     loadmsg db "load loader.bin", 0x0A, 0x00
