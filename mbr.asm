@@ -8,12 +8,13 @@
 BITS 16
 ORG 0x7C00
 
-VideoSegment EQU 0xB800         ; 显存段地址
+VideoSegment        EQU 0xB800          ; 显存段地址
 
-CursorIndexRegister EQU 0x3D4   ; 光标索引寄存器
-CursorIndexH EQU 0x0E           ; 光标位置高8位索引值
-CursorIndexL EQU 0x0F           ; 光标位置高8位索引值
-CursorDataRegister  EQU 0x3D5   ; 光标位置数据寄存器
+; http://www.osdever.net/FreeVGA/vga/crtcreg.htm
+CRTCAddrRegister    EQU 0x3D4           ; 光标索引寄存器
+CursorLocationH EQU 0x0E                ; 光标位置高8位索引值
+CursorLocationL EQU 0x0F                ; 光标位置高8位索引值
+CRTCDataRegister    EQU 0x3D5           ; 光标位置数据寄存器
 
 VWidth  EQU 80
 VHeight EQU 25
@@ -26,6 +27,10 @@ entry:
     mov ax, cs
     mov ds, ax
     mov es, ax
+
+    in al, 0x92
+    or al, 0000_0010b
+    out 0x92, al
 
     ; 初始化栈
     mov ss, ax
@@ -82,22 +87,22 @@ putc:
 
     ; 先获得光标的位置放到bx中
     ; 向索引寄存器写入要读取高8位的索引
-    mov al, CursorIndexH
-    mov dx, CursorIndexRegister
+    mov al, CursorLocationH
+    mov dx, CRTCAddrRegister
     out dx, al
 
     ; 从数据寄存器中读出高8位的位置放到ah中
-    mov dx, CursorDataRegister
+    mov dx, CRTCDataRegister
     in  al, dx
     mov bh, al
 
     ; 向索引寄存器写入要读取低8位的索引
-    mov al, CursorIndexL
-    mov dx, CursorIndexRegister
+    mov al, CursorLocationL
+    mov dx, CRTCAddrRegister
     out dx, al
 
     ; 从数据寄存器中读出低8位的位置放到al中
-    mov dx, CursorDataRegister
+    mov dx, CRTCDataRegister
     in  al, dx
     mov bl, al
 
@@ -170,18 +175,18 @@ set_cursor:
     push bx
     push ax
 
-    mov al, CursorIndexH
-    mov dx, CursorIndexRegister
+    mov al, CursorLocationH
+    mov dx, CRTCAddrRegister
     out dx, al
     mov al, bh              ; 得到光标的高8位
-    mov dx, CursorDataRegister
+    mov dx, CRTCDataRegister
     out dx, al
 
-    mov al, CursorIndexL
-    mov dx, CursorIndexRegister
+    mov al, CursorLocationL
+    mov dx, CRTCAddrRegister
     out dx, al
     mov al, bl              ; 得到光标的低8位
-    mov dx, CursorDataRegister
+    mov dx, CRTCDataRegister
     out dx, al
 
     pop ax
